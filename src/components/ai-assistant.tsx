@@ -1,56 +1,55 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Bot, X, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import axios from "axios";
+import { Message } from "@/models/Message";
+import ReactMarkdown from "react-markdown";
+import { Textarea } from "./ui/textarea";
 
 export default function AiAssistant() {
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState([
+  const [messages, setMessages] = useState<Message[]>([
     {
-      id: 1,
       text: "Hi there! I'm your AI assistant. Ask me anything about your notes.",
-      sender: "bot",
+      role: "model",
     },
   ]);
+  const [isThinking, setIsThinking] = useState(false);
   const [inputValue, setInputValue] = useState("");
+  const bottomRef = useRef<HTMLDivElement | null>(null);
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!inputValue.trim()) return;
-
-    // Add user message
-    const userMessage = {
-      id: messages.length + 1,
-      text: inputValue,
-      sender: "user",
-    };
-
-    setMessages([...messages, userMessage]);
+    setMessages((prev) => [...prev, { text: inputValue, role: "user" }]);
     setInputValue("");
 
-    // Simulate AI response
-    setTimeout(() => {
-      const botResponses = [
-        "I found several notes related to your query. Would you like me to summarize them?",
-        "Based on your notes, your next deadline is on April 10th for the website redesign.",
-        "You have 3 notes about project deadlines. Would you like me to show them?",
-        "I don't see any notes about that topic yet. Would you like to create one?",
-      ];
+    try {
+      setIsThinking(true);
+      const res = await axios.post("/api/chat", {
+        query: inputValue,
+        history: messages,
+      });
 
-      const randomResponse =
-        botResponses[Math.floor(Math.random() * botResponses.length)];
-
-      const botMessage = {
-        id: messages.length + 2,
-        text: randomResponse,
-        sender: "bot",
-      };
-
-      setMessages((prevMessages) => [...prevMessages, botMessage]);
-    }, 1000);
+      if (res.data) {
+        setMessages((prev) => [
+          ...prev,
+          { text: res.data.response, role: "model" },
+        ]);
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsThinking(false);
+    }
   };
+
+  useEffect(() => {
+    console.log("Messages changed");
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   return (
     <>
@@ -100,38 +99,93 @@ export default function AiAssistant() {
               </div>
 
               {/* Messages */}
+
               <div className="h-80 overflow-y-auto p-4 flex flex-col gap-3">
-                {messages.map((message) => (
+                {messages.map((message, idx) => (
                   <div
-                    key={message.id}
+                    key={idx}
                     className={`flex ${
-                      message.sender === "user"
-                        ? "justify-end"
-                        : "justify-start"
+                      message.role === "user" ? "justify-end" : "justify-start"
                     }`}
                   >
                     <div
                       className={`max-w-[80%] p-3 rounded-xl ${
-                        message.sender === "user"
+                        message.role === "user"
                           ? "bg-black text-white rounded-tr-none"
                           : "bg-blue-100 border-2 border-blue-300 rounded-tl-none"
                       }`}
+                      ref={bottomRef}
                     >
-                      <p>{message.text}</p>
+                      {message.role === "model" ? (
+                        <ReactMarkdown>{message.text}</ReactMarkdown>
+                      ) : (
+                        <p>{message.text}</p>
+                      )}
                     </div>
                   </div>
                 ))}
+                {isThinking && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    className="flex items-start gap-3 mb-4"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
+                      <Bot className="w-5 h-5 text-white" />
+                    </div>
+
+                    <div className="p-3 rounded-xl max-w-[80%] bg-white border-2 border-black rounded-tl-none">
+                      <div className="flex space-x-1">
+                        <motion.div
+                          className="w-2 h-2 bg-gray-400 rounded-full"
+                          animate={{ y: [0, -5, 0] }}
+                          transition={{
+                            repeat: Number.POSITIVE_INFINITY,
+                            duration: 0.8,
+                            delay: 0,
+                          }}
+                        />
+                        <motion.div
+                          className="w-2 h-2 bg-gray-400 rounded-full"
+                          animate={{ y: [0, -5, 0] }}
+                          transition={{
+                            repeat: Number.POSITIVE_INFINITY,
+                            duration: 0.8,
+                            delay: 0.2,
+                          }}
+                        />
+                        <motion.div
+                          className="w-2 h-2 bg-gray-400 rounded-full"
+                          animate={{ y: [0, -5, 0] }}
+                          transition={{
+                            repeat: Number.POSITIVE_INFINITY,
+                            duration: 0.8,
+                            delay: 0.4,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
               </div>
 
               {/* Input */}
               <div className="p-4 border-t-2 border-gray-200">
                 <div className="flex gap-2">
-                  <Input
+                  <Textarea
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && e.ctrlKey) {
+                        setInputValue((prev) => prev + "\n");
+                        return;
+                      }
+
+                      if (e.key === "Enter") handleSendMessage();
+                    }}
                     placeholder="Ask about your notes..."
-                    className="border-2 border-black rounded-lg"
+                    className="border-2 border-black rounded-lg resize-none max-h-20"
                   />
                   <Button
                     onClick={handleSendMessage}
