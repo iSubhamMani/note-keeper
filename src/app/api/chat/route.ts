@@ -20,10 +20,12 @@ export async function POST(req: NextRequest) {
     const userId = (await supabase.auth.getUser()).data.user?.id;
 
     if (!userId) {
-      return NextResponse.json({
-        status: 401,
-        json: { message: "User not found" },
-      });
+      return NextResponse.json(
+        {
+          json: { message: "User not found" },
+        },
+        { status: 401 }
+      );
     }
 
     const queryEmbedding = await embeddingModel.embedContent(query);
@@ -38,10 +40,16 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    const relevantChunks = queryResult.matches
-      ?.map((match) => match.metadata?.chunk)
-      .filter(Boolean)
-      .join("\n\n");
+    /*const aboveThresholdResult = queryResult.matches?.filter(
+      (match) => match.score! > 0.4
+    );*/
+
+    console.log(queryResult.matches);
+
+    const ctx = queryResult?.matches?.map((match) => {
+      return `**Title:** ${match.metadata?.title}\n**Content:** ${match.metadata?.chunk}\n`;
+    });
+    console.log(ctx);
 
     const systemPrompt = `
       You are an AI assistant who knows everything about the user's notes.
@@ -60,7 +68,7 @@ export async function POST(req: NextRequest) {
   
       -------------
       START CONTEXT
-      ${relevantChunks}
+      ${ctx}
       END CONTEXT
       -------------
       QUESTION: ${query}
@@ -88,6 +96,13 @@ export async function POST(req: NextRequest) {
 
     const result = await chat.sendMessage(query);
     const response = result.response.text();
+
+    if (!response.trim()) {
+      return NextResponse.json(
+        { message: "No response found" },
+        { status: 404 }
+      );
+    }
 
     return NextResponse.json({ response });
   } catch (error) {

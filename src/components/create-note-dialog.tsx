@@ -14,7 +14,6 @@ import { useState } from "react";
 import { Button } from "./ui/button";
 import { LoaderCircle, Plus } from "lucide-react";
 import axios from "axios";
-import { supabaseClient } from "@/lib/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 
 const CreateNoteDialog = () => {
@@ -28,48 +27,21 @@ const CreateNoteDialog = () => {
       return;
     }
 
-    const supabase = supabaseClient();
-
     try {
       setSavingNote(true);
-      const userId = (await supabase.auth.getSession()).data.session?.user.id;
-
-      if (!userId) {
-        console.error("User not found");
-        return;
-      }
-
-      const { error } = await supabase.from("notes").insert({
-        content: JSON.stringify(newNote),
-        created_by: userId,
+      const res = await axios.post("/api/note/save", {
+        note: newNote,
       });
 
-      if (error) {
-        console.error(error.message);
-        return;
+      if (res.data.success) {
+        qc.invalidateQueries({ queryKey: ["notes"], exact: true });
+        setIsDialogOpen(false);
+        setNewNote({ title: "", description: "" });
       }
-
-      setIsDialogOpen(false);
-      setNewNote({ title: "", description: "" });
-      qc.invalidateQueries({
-        queryKey: ["notes"],
-        exact: true,
-      });
     } catch {
       console.error("Error saving note");
     } finally {
       setSavingNote(false);
-    }
-
-    // save the embeddings if description is present
-    if (newNote.description.trim()) {
-      try {
-        await axios.post("/api/worker/saveEmbeddings", {
-          noteContent: newNote.description.trim(),
-        });
-      } catch {
-        console.error("Error saving embeddings");
-      }
     }
   };
 
@@ -124,7 +96,10 @@ const CreateNoteDialog = () => {
               className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
             >
               {savingNote ? (
-                <LoaderCircle className="animate-spin size-5" />
+                <div className="flex items-center gap-4">
+                  <LoaderCircle className="animate-spin size-5" />
+                  <span>Saving...this may take some time</span>
+                </div>
               ) : (
                 "Create Note"
               )}

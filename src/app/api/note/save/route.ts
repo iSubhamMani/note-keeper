@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { createClientForServer } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
@@ -49,47 +50,66 @@ async function getEmbeddingsForChunks(chunks: string[]) {
 const CHUNK_SIZE = 300;
 
 export async function POST(req: NextRequest) {
-  const { noteContent } = await req.json();
+  const { note } = await req.json();
+  const { description, title } = note;
 
-  if (!noteContent.trim()) {
-    return NextResponse.json({
-      status: 400,
-      json: { message: "Title is required" },
-    });
+  if (!title.trim() || !description.trim()) {
+    return NextResponse.json(
+      { message: "Title and content is required" },
+      { status: 400 }
+    );
   }
 
-  const supabase = await createClientForServer();
-  const userId = (await supabase.auth.getUser()).data.user?.id;
-
-  if (!userId) {
-    return NextResponse.json({
-      status: 401,
-      json: { message: "User not found" },
-    });
-  }
-
-  // Save the embeddings
   try {
-    const chunks = chunkText(noteContent, CHUNK_SIZE);
+    const supabase = await createClientForServer();
+    const userId = (await supabase.auth.getUser()).data.user?.id;
+
+    if (!userId) {
+      return NextResponse.json(
+        {
+          message: "User not found",
+        },
+        { status: 401 }
+      );
+    }
+
+    // Save the embeddings
+    const id = uuidv4();
+    const chunks = chunkText(description, CHUNK_SIZE);
     const embeddings = await getEmbeddingsForChunks(chunks);
 
     const vectors = embeddings.map((embedding, i) => ({
-      id: uuidv4(),
+      id,
       values: embedding,
       metadata: {
         chunk: chunks[i],
         userId,
+        title,
       },
     }));
 
     await pc.upsert(vectors);
 
+    const { error } = await supabase.from("notes").insert({
+      content: JSON.stringify(note),
+      created_by: userId,
+      id,
+    });
+
+    if (error)
+      return NextResponse.json(
+        {
+          message: error.message,
+        },
+        { status: 400 }
+      );
+
     return NextResponse.json(
-      { message: "Embeddings saved successfully" },
+      { message: "Note saved successfully", success: true },
       { status: 201 }
     );
   } catch (error: any) {
-    console.error("Embedding save failed:", error);
+    console.error("Note save failed:", error);
     return NextResponse.json(
       { message: "Error saving embeddings" },
       { status: 500 }
