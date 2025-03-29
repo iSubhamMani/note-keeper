@@ -29,7 +29,7 @@ const CreateNoteDialog = () => {
 
     try {
       setSavingNote(true);
-      const res = await axios.post("/api/note/save", {
+      const res = await axios.post("/api/note", {
         note: newNote,
       });
 
