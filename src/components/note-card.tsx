@@ -17,6 +17,7 @@ import { Note } from "@/models/Note";
 import axios from "axios";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 interface NoteCardProps {
   note: Note;
@@ -68,6 +69,15 @@ export default function NoteCard({ note }: NoteCardProps) {
         qc.invalidateQueries({
           queryKey: ["notes"],
           exact: true,
+        });
+        toast("Note deleted", {
+          position: "bottom-center",
+          duration: 3000,
+          style: {
+            backgroundColor: "#2D7DFD",
+            color: "#fff",
+            fontWeight: "bold",
+          },
         });
       }
     } catch (error) {
