@@ -41,7 +41,7 @@ export default function NoteCard({ note }: NoteCardProps) {
     ];
 
     // Use the note id to pick a color (ensures consistency for the same note)
-    return colors[note.id % colors.length];
+    return colors[Math.abs(note.id.charCodeAt(0) % colors.length)];
   };
 
   const { content } = note;
