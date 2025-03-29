@@ -73,28 +73,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Save the embeddings
     const id = uuidv4();
-    const fullContent = `${title}: ${description}`;
-    const chunks = chunkText(fullContent, CHUNK_SIZE);
-    const embeddings = await getEmbeddingsForChunks(chunks);
 
-    const vectors = embeddings.map((embedding, i) => ({
-      id,
-      values: embedding,
-      metadata: {
-        chunk: chunks[i],
-        userId,
-      },
-    }));
-
-    await pc.upsert(vectors);
-
-    const { error } = await supabase.from("notes").insert({
-      content: JSON.stringify(note),
-      created_by: userId,
-      id,
-    });
+    const { error } = await supabase
+      .from("notes")
+      .insert({
+        content: JSON.stringify(note),
+        created_by: userId,
+        id,
+      })
+      .single();
 
     if (error)
       return NextResponse.json(
@@ -104,6 +92,33 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
 
+    // Save the embeddings
+
+    try {
+      const fullContent = `${title}: ${description}`;
+      const chunks = chunkText(fullContent, CHUNK_SIZE);
+      const embeddings = await getEmbeddingsForChunks(chunks);
+
+      const vectors = embeddings.map((embedding, i) => ({
+        id,
+        values: embedding,
+        metadata: {
+          chunk: chunks[i],
+          userId,
+        },
+      }));
+
+      await pc.upsert(vectors);
+    } catch {
+      console.error("Error saving embeddings:", error);
+      // Rollback: Delete the note from Supabase
+      await supabase.from("notes").delete().eq("id", id);
+      return NextResponse.json(
+        { message: "Error saving embeddings" },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json(
       { message: "Note saved successfully", success: true },
       { status: 201 }
@@ -112,6 +127,87 @@ export async function POST(req: NextRequest) {
     console.error("Note save failed:", error);
     return NextResponse.json(
       { message: "Error saving embeddings" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  const url = new URL(req.url);
+  const noteId = url.searchParams.get("id") as string;
+
+  if (!noteId) {
+    return NextResponse.json(
+      { message: "NoteId is required", success: false },
+      { status: 400 }
+    );
+  }
+
+  try {
+    const supabase = await createClientForServer();
+    const userId = (await supabase.auth.getUser()).data.user?.id;
+
+    if (!userId) {
+      return NextResponse.json(
+        { message: "User not found", success: false },
+        { status: 401 }
+      );
+    }
+
+    // Check if the note exists before deletion
+    const { data: existingNote, error: fetchError } = await supabase
+      .from("notes")
+      .select("id, content, created_by, created_at")
+      .eq("id", noteId)
+      .eq("created_by", userId)
+      .single();
+
+    if (fetchError || !existingNote) {
+      return NextResponse.json(
+        { message: "Note not found or unauthorized", success: false },
+        { status: 404 }
+      );
+    }
+
+    // Step 1: Delete from Supabase
+    const { error: deleteError } = await supabase
+      .from("notes")
+      .delete()
+      .eq("id", noteId);
+
+    if (deleteError) {
+      return NextResponse.json(
+        { message: deleteError.message, success: false },
+        { status: 400 }
+      );
+    }
+
+    // Step 2: Delete from Pinecone
+    try {
+      await pc.deleteOne(noteId);
+    } catch (pineconeError) {
+      console.error("Pinecone deletion failed:", pineconeError);
+
+      // Rollback: Restore the note in Supabase
+      await supabase.from("notes").insert(existingNote);
+
+      return NextResponse.json(
+        {
+          message: "Pinecone deletion failed. Rolling back Supabase deletion.",
+          success: false,
+        },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(
+      { message: "Note deleted successfully", success: true },
+      { status: 200 }
+    );
+  } catch (error: any) {
+    console.error("Unexpected error:", error);
+    return NextResponse.json(
+      { message: "Error deleting note", success: false },
       { status: 500 }
     );
   }
