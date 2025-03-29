@@ -1,4 +1,11 @@
-import { Calendar, Clock, MoreHorizontal } from "lucide-react";
+"use client";
+
+import {
+  Calendar,
+  Clock,
+  LoaderCircleIcon,
+  MoreHorizontal,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -7,12 +14,18 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Note } from "@/models/Note";
+import axios from "axios";
+import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface NoteCardProps {
   note: Note;
 }
 
 export default function NoteCard({ note }: NoteCardProps) {
+  const [deleting, setDeleting] = useState(false);
+  const qc = useQueryClient();
+
   const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat("en-US", {
       month: "short",
@@ -46,6 +59,24 @@ export default function NoteCard({ note }: NoteCardProps) {
 
   const { content } = note;
 
+  const handleDelete = async () => {
+    try {
+      setDeleting(true);
+      const res = await axios.delete(`/api/note?id=${note.id}`);
+
+      if (res.data.success) {
+        qc.invalidateQueries({
+          queryKey: ["notes"],
+          exact: true,
+        });
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <div
       className={`${getRandomColor()} border-4 border-black rounded-xl shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] overflow-hidden transition-all duration-300 hover:translate-x-1 hover:translate-y-1 hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]`}
@@ -63,10 +94,19 @@ export default function NoteCard({ note }: NoteCardProps) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="border-2 border-black">
-              <DropdownMenuItem>Edit</DropdownMenuItem>
-              <DropdownMenuItem>Share</DropdownMenuItem>
-              <DropdownMenuItem className="text-red-600">
-                Delete
+              <DropdownMenuItem className="cursor-pointer font-medium ">
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                disabled={deleting}
+                onClick={handleDelete}
+                className="text-red-600 font-medium cursor-pointer"
+              >
+                {deleting ? (
+                  <LoaderCircleIcon className="size-4 animate-spin text-black" />
+                ) : (
+                  "Delete"
+                )}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
