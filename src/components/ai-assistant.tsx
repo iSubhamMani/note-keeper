@@ -100,7 +100,7 @@ export default function AiAssistant() {
 
               {/* Messages */}
 
-              <div className="h-80 overflow-y-auto p-4 flex flex-col gap-3">
+              <div className="assistant-msg-container h-80 overflow-y-auto p-4 flex flex-col gap-3">
                 {messages.map((message, idx) => (
                   <div
                     key={idx}
