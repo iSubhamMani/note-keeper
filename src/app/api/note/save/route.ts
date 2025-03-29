@@ -75,7 +75,8 @@ export async function POST(req: NextRequest) {
 
     // Save the embeddings
     const id = uuidv4();
-    const chunks = chunkText(description, CHUNK_SIZE);
+    const fullContent = `${title}: ${description}`;
+    const chunks = chunkText(fullContent, CHUNK_SIZE);
     const embeddings = await getEmbeddingsForChunks(chunks);
 
     const vectors = embeddings.map((embedding, i) => ({
@@ -84,7 +85,6 @@ export async function POST(req: NextRequest) {
       metadata: {
         chunk: chunks[i],
         userId,
-        title,
       },
     }));
 
