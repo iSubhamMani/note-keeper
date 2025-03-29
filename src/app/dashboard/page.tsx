@@ -1,6 +1,6 @@
 "use client";
 
-import { Brain } from "lucide-react";
+import { Brain, LoaderCircle } from "lucide-react";
 import NoteCard from "@/components/note-card";
 import AiAssistant from "@/components/ai-assistant";
 import LogoutButton from "@/components/logout-button";
@@ -28,6 +28,7 @@ export default function Dashboard() {
     data: notes,
     isLoading,
     isError,
+    isFetching,
   } = useQuery({
     queryKey: ["notes"],
     queryFn: getNotes,
@@ -60,6 +61,19 @@ export default function Dashboard() {
           <h1 className="text-3xl font-bold">Your Notes</h1>
           <CreateNoteDialog />
         </div>
+        {isError && (
+          <div className="flex justify-center my-6">
+            <p className="text-lg text-red-600 font-bold">
+              An error occurred while fetching notes.
+            </p>
+          </div>
+        )}
+        {/* Loading State */}
+        {(isLoading || isFetching) && (
+          <div className="flex justify-center my-6">
+            <LoaderCircle className="animate-spin h-6 w-6 text-blue-500" />
+          </div>
+        )}
         {/* Notes Grid */}
         {notes?.length === 0 && (
           <div className="mt-20">
