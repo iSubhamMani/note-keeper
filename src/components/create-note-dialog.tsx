@@ -15,6 +15,7 @@ import { Button } from "./ui/button";
 import { LoaderCircle, Plus } from "lucide-react";
 import axios from "axios";
 import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 const CreateNoteDialog = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -23,7 +24,10 @@ const CreateNoteDialog = () => {
   const qc = useQueryClient();
 
   const createNote = async () => {
-    if (!newNote.title.trim()) {
+    if (!newNote.title.trim() || !newNote.description.trim()) {
+      toast("Title and description are required", {
+        position: "bottom-center",
+      });
       return;
     }
 
@@ -78,7 +82,7 @@ const CreateNoteDialog = () => {
             </div>
             <div className="space-y-2">
               <Label htmlFor="description" className="font-bold">
-                Description (optional)
+                Description
               </Label>
               <Textarea
                 id="description"
