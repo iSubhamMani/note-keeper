@@ -212,3 +212,106 @@ export async function DELETE(req: NextRequest) {
     );
   }
 }
+
+export async function PATCH(req: NextRequest) {
+  const url = new URL(req.url);
+  const noteId = url.searchParams.get("id") as string;
+  let { note } = await req.json();
+  note = JSON.parse(note);
+
+  if (!noteId || !note) {
+    return NextResponse.json(
+      { message: "Note Id or note content is missing", success: false },
+      { status: 400 }
+    );
+  }
+
+  try {
+    const supabase = await createClientForServer();
+    const userId = (await supabase.auth.getUser()).data.user?.id;
+
+    if (!userId) {
+      return NextResponse.json(
+        { message: "User not found", success: false },
+        { status: 401 }
+      );
+    }
+
+    // Check if the note exists before updation
+    const { data: existingNote, error: fetchError } = await supabase
+      .from("notes")
+      .select("id, content, created_by, created_at")
+      .eq("id", noteId)
+      .eq("created_by", userId)
+      .single();
+
+    if (fetchError || !existingNote) {
+      return NextResponse.json(
+        { message: "Note not found or unauthorized", success: false },
+        { status: 404 }
+      );
+    }
+
+    // Step 1: Update in Supabase
+    const { error: updateError } = await supabase
+      .from("notes")
+      .update({
+        content: JSON.stringify(note),
+      })
+      .eq("id", noteId);
+
+    if (updateError) {
+      return NextResponse.json(
+        { message: updateError.message, success: false },
+        { status: 400 }
+      );
+    }
+
+    // Step 2: Update in Pinecone
+    try {
+      const fullContent = `${note.title}: ${note.description}`;
+      const chunks = chunkText(fullContent, CHUNK_SIZE);
+      const embeddings = await getEmbeddingsForChunks(chunks);
+
+      const vectors = embeddings.map((embedding, i) => ({
+        id: noteId,
+        values: embedding,
+        metadata: {
+          chunk: chunks[i],
+          userId,
+        },
+      }));
+
+      await pc.upsert(vectors);
+    } catch (pineconeError) {
+      console.error("Pinecone updation failed:", pineconeError);
+
+      // Rollback: Restore the note in Supabase
+      await supabase
+        .from("notes")
+        .update({
+          content: existingNote.content,
+        })
+        .eq("id", noteId);
+
+      return NextResponse.json(
+        {
+          message: "Pinecone updation failed. Rolling back Supabase deletion.",
+          success: false,
+        },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(
+      { message: "Note updated successfully", success: true },
+      { status: 200 }
+    );
+  } catch (error: any) {
+    console.error("Unexpected error:", error);
+    return NextResponse.json(
+      { message: "Error updating note", success: false },
+      { status: 500 }
+    );
+  }
+}
