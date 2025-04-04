@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Note } from "@/models/Note";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -22,9 +22,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "./ui/input";
-import { Textarea } from "./ui/textarea";
 import { Card } from "./ui/card";
 import { format } from "date-fns";
+import MDEditor from "@uiw/react-md-editor";
+import ReactMarkdown from "react-markdown";
+import { Label } from "./ui/label";
 
 interface NoteCardProps {
   note: Note;
@@ -36,6 +38,7 @@ export default function NoteCard({ note }: NoteCardProps) {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [updating, setUpdating] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const [editNote, setEditNote] = useState({
     title: JSON.parse(note.content).title || "",
@@ -162,10 +165,52 @@ export default function NoteCard({ note }: NoteCardProps) {
     }
   };
 
+  const handleImageUpload = async (fd: FormData) => {
+    try {
+      setUploadingImage(true);
+      const res = await axios.post("/api/media/upload", fd);
+
+      if (res.data.url) {
+        const url = res.data.url;
+        setEditNote((prev) => ({
+          ...prev,
+          description: prev.description + `\n\n![image](${url})`,
+        }));
+
+        toast("Image uploaded successfully", {
+          position: "bottom-center",
+          style: {
+            backgroundColor: "#2D7DFD",
+            color: "#fff",
+            fontWeight: "bold",
+          },
+          duration: 3000,
+        });
+      }
+    } catch (error) {
+      toast(
+        error instanceof AxiosError
+          ? error.response?.data.message
+          : "Error uploading image",
+        {
+          position: "bottom-center",
+          style: {
+            background: "red",
+            color: "white",
+            fontWeight: "bold",
+          },
+          duration: 3000,
+        }
+      );
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
   return (
     <>
       <Card
-        className={`relative p-6 cursor-pointer transition-transform hover:translate-x-1 hover:translate-y-1 bg-white border-2 ${getRandomColor()}`}
+        className={`flex flex-col relative p-6 cursor-pointer transition-transform hover:translate-x-1 hover:translate-y-1 bg-white border-2 ${getRandomColor()}`}
         style={{
           boxShadow: "4px 4px 0 0 #000",
         }}
@@ -201,9 +246,28 @@ export default function NoteCard({ note }: NoteCardProps) {
         </div>
 
         <h3 className="font-bold text-xl mb-2">{JSON.parse(content).title}</h3>
-        <p className="text-gray-600 mb-4 line-clamp-3">
-          {JSON.parse(content).description}
-        </p>
+        <div className="flex-1 line-clamp-3">
+          <ReactMarkdown
+            components={{
+              p: ({ node, ...props }) => {
+                // Check if paragraph contains an img element
+                const hasImage = node?.children.some(
+                  (child) => child.type === "element" && child.tagName === "img"
+                );
+
+                // If it has an image, don't render the paragraph
+                if (hasImage) {
+                  return null;
+                }
+
+                // Otherwise render normally
+                return <p className="break-words" {...props} />;
+              },
+            }}
+          >
+            {JSON.parse(note.content).description}
+          </ReactMarkdown>
+        </div>
         <div className="text-sm text-gray-500">
           {formatDate(new Date(note.created_at))} •{" "}
           {formatTime(new Date(note.created_at))}
@@ -213,16 +277,16 @@ export default function NoteCard({ note }: NoteCardProps) {
       {/* Details Dialog */}
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
         <DialogContent
-          className="border-2 border-black"
+          className="note-details border-2 border-black max-h-[640px] overflow-y-auto"
           style={{ boxShadow: "8px 8px 0 0 #000" }}
         >
           <DialogHeader>
             <DialogTitle>{JSON.parse(note.content).title}</DialogTitle>
           </DialogHeader>
           <div className="mt-4 space-y-4">
-            <p className="text-gray-600 whitespace-pre-wrap">
+            <ReactMarkdown>
               {JSON.parse(note.content).description}
-            </p>
+            </ReactMarkdown>
             <p className="text-sm text-gray-500">
               Created on {format(note.created_at, "MMMM d, yyyy")} at{" "}
               {format(note.created_at, "h:mm a")}
@@ -234,48 +298,86 @@ export default function NoteCard({ note }: NoteCardProps) {
       {/* Edit Dialog */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
         <DialogContent
-          className="border-2 border-black"
+          className="p-0 border-2 border-black sm:max-w-xl md:max-w-3xl"
           style={{ boxShadow: "8px 8px 0 0 #000" }}
         >
-          <DialogHeader>
-            <DialogTitle>Edit Note</DialogTitle>
-            <DialogDescription>
-              Make changes to your note here.
-            </DialogDescription>
+          <DialogHeader className="px-4 md:px-6 py-4 md:py-6">
+            <DialogTitle className="text-start">Edit Note</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="px-2 sm:px-4 md:px-6 pb-4 space-y-4">
             <div className="space-y-2">
+              <Label htmlFor="title" className="font-bold pl-2">
+                Title
+              </Label>
               <Input
+                id="title"
                 value={editNote.title}
                 onChange={(e) =>
                   setEditNote({ ...editNote, title: e.target.value })
                 }
                 placeholder="Note title"
-                className="border-2 border-black"
+                className="border-2 border-black text-sm"
               />
             </div>
-            <div className="space-y-2">
-              <Textarea
+
+            <div className="container space-y-4">
+              <div className="flex justify-between items-center">
+                <Label htmlFor="description" className="pl-2 font-bold">
+                  Description
+                </Label>
+                <Label
+                  htmlFor="imageUpload"
+                  className="px-4 py-1.5 text-xs sm:text-sm rounded-lg cursor-pointer max-w-[200px] border-2 border-blue-500 text-black bg-white hover:bg-gray-100 font-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                >
+                  {uploadingImage ? (
+                    <div className="flex items-center gap-2">
+                      <LoaderCircle className="animate-spin size-5" />
+                      <span>Uploading...</span>
+                    </div>
+                  ) : (
+                    "Upload Image"
+                  )}
+                </Label>
+                <Input
+                  onChange={(e) => {
+                    const fd = new FormData();
+                    if (e.target.files) {
+                      fd.append("imgFile", e.target.files[0]);
+                      handleImageUpload(fd);
+                    }
+                    e.target.files = null;
+                  }}
+                  id="imageUpload"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                />
+              </div>
+              <MDEditor
+                id="description"
+                className="min-h-[120px] max-h-[360px] overflow-y-auto"
                 value={editNote.description}
                 onChange={(e) =>
-                  setEditNote({ ...editNote, description: e.target.value })
+                  setEditNote({ ...editNote, description: e || "" })
                 }
-                placeholder="Note description"
-                className="min-h-[150px] border-2 border-black"
+                height={400}
+                preview="edit"
+                textareaProps={{
+                  placeholder: "Enter note description",
+                }}
               />
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="px-6 pb-4">
             <Button
               disabled={updating}
               onClick={handleUpdate}
-              className="bg-black text-white hover:bg-gray-800 border-2 border-black"
-              style={{ boxShadow: "4px 4px 0 0 #000" }}
+              className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
             >
               {updating ? (
-                <div className="flex items-center gap-2">
-                  Saving...this may take some time{" "}
-                  <LoaderCircle className="size-5 animate-spin" />
+                <div className="flex items-center gap-4">
+                  <LoaderCircle className="animate-spin size-5" />
+                  <span>Saving...this may take some time</span>
                 </div>
               ) : (
                 "Save changes"
