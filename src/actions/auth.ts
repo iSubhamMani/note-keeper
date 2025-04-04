@@ -7,7 +7,7 @@ import { redirect } from "next/navigation";
 const signInWith = (provider: Provider) => async () => {
   const supabase = await createClientForServer();
   const auth_callback_url =
-    process.env.AUTH_CALLBACK_URL || "http://localhost:3000/auth/callback";
+    "https://notekeeper-psi-two.vercel.app/auth/callback";
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider,
