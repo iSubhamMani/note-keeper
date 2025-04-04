@@ -75,5 +75,3 @@ To run Note Keeper locally, follow these steps:
     ```
 
     Open your browser and navigate to `http://localhost:3000`.
-
-## Project Structure
