@@ -131,26 +131,31 @@ html::-webkit-scrollbar {
   }
 }
 
-.assistant-msg-container::-webkit-scrollbar {
+.assistant-msg-container::-webkit-scrollbar,
+.note-details::-webkit-scrollbar {
   width: 8px;
 }
 
-.assistant-msg-container::-webkit-scrollbar-track {
+.assistant-msg-container::-webkit-scrollbar-track,
+.note-details::-webkit-scrollbar-track {
   background: #f1f1f1;
   border-radius: 10px;
 }
 
-.assistant-msg-container::-webkit-scrollbar-thumb {
+.assistant-msg-container::-webkit-scrollbar-thumb,
+.note-details::-webkit-scrollbar-thumb {
   background: var(--color-blue-500);
   border-radius: 10px;
 }
 
-.assistant-msg-container::-webkit-scrollbar-thumb:hover {
+.assistant-msg-container::-webkit-scrollbar-thumb:hover,
+.note-details::-webkit-scrollbar-thumb:hover {
   background: #555;
 }
 
 /* Firefox */
-.assistant-msg-container {
+.assistant-msg-container,
+.note-details {
   scrollbar-width: thin;
   scrollbar-color: var(--color-blue-500) #f1f1f1;
 }
