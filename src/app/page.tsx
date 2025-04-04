@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Brain, MessageSquare, Pencil } from "lucide-react";
+import { MessageSquare, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import FeatureCard from "@/components/feature-card";
 import HeroAnimation from "@/components/hero-animation";
@@ -8,6 +8,7 @@ import HeroText from "@/components/hero-text";
 import LoginButton from "@/components/LoginButton";
 import { createClientForServer } from "@/lib/supabase/server";
 import DashboardButton from "@/components/dashboard-button";
+import Image from "next/image";
 
 export default async function Home() {
   const supabase = await createClientForServer();
@@ -21,8 +22,14 @@ export default async function Home() {
       <header className="container mx-auto px-4 py-6">
         <nav className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="h-10 w-10 rounded-md bg-black p-2">
-              <Brain className="h-6 w-6 text-white" />
+            <div className="size-10">
+              <Image
+                src={"/logo.jpeg"}
+                alt="Note Keeper Logo"
+                width={48}
+                height={48}
+                className="w-full h-full"
+              />
             </div>
             <span className="text-xl font-bold">Note Keeper</span>
           </div>
@@ -33,15 +40,12 @@ export default async function Home() {
             <Link href="#demo" className="font-medium hover:underline">
               Demo
             </Link>
-            <Link href="#pricing" className="font-medium hover:underline">
-              Pricing
-            </Link>
           </div>
         </nav>
       </header>
 
       {/* Hero Section */}
-      <section className="container mx-auto px-4 py-20">
+      <section id="get-started" className="container mx-auto px-4 py-20">
         <div className="flex flex-col md:flex-row items-center gap-12">
           <div className="flex-1 space-y-6">
             <HeroText />
@@ -74,7 +78,7 @@ export default async function Home() {
             <FeatureCard
               icon={<Pencil />}
               title="Smart Note Taking"
-              description="Take notes with rich text formatting, images, and automatic organization. Our app learns from your notes to suggest tags and categories."
+              description="Take notes with full markdown support, rich text formatting and images."
               color="bg-pink-400"
             />
             <FeatureCard
@@ -113,9 +117,11 @@ export default async function Home() {
             Join thousands of users who have already upgraded their productivity
             with Note Keeper
           </p>
-          <Button className="bg-white text-black text-lg px-8 py-6 rounded-xl font-bold hover:bg-gray-100 shadow-[6px_6px_0px_0px_rgba(59,130,246,1)]">
-            First 5 Assistant Q&A free
-          </Button>
+          <Link href="/#get-started">
+            <Button className="bg-white text-black text-lg px-8 py-6 rounded-xl font-bold hover:bg-gray-100 shadow-[6px_6px_0px_0px_rgba(59,130,246,1)]">
+              Get Started
+            </Button>
+          </Link>
         </div>
       </section>
 
@@ -124,8 +130,14 @@ export default async function Home() {
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center gap-2 mb-4 md:mb-0">
-              <div className="h-8 w-8 rounded-md bg-black p-1.5">
-                <Brain className="h-5 w-5 text-white" />
+              <div className="size-10">
+                <Image
+                  src={"/logo.jpeg"}
+                  alt="Note Keeper Logo"
+                  width={48}
+                  height={48}
+                  className="w-full h-full"
+                />
               </div>
               <span className="text-lg font-bold">Note Keeper</span>
             </div>
@@ -133,9 +145,7 @@ export default async function Home() {
               <Link href="#" className="text-gray-600 hover:text-black">
                 Features
               </Link>
-              <Link href="#" className="text-gray-600 hover:text-black">
-                Pricing
-              </Link>
+
               <Link href="#" className="text-gray-600 hover:text-black">
                 Blog
               </Link>
@@ -144,7 +154,7 @@ export default async function Home() {
               </Link>
             </div>
             <div className="text-gray-600">
-              © 2025 Note Keeper. All rights reserved.
+              © {new Date().getFullYear()} Note Keeper. All rights reserved.
             </div>
           </div>
         </div>

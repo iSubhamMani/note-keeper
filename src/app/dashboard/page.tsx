@@ -1,12 +1,13 @@
 "use client";
 
-import { Brain, LoaderCircle } from "lucide-react";
+import { LoaderCircle } from "lucide-react";
 import NoteCard from "@/components/note-card";
 import AiAssistant from "@/components/ai-assistant";
 import LogoutButton from "@/components/logout-button";
 import CreateNoteDialog from "@/components/create-note-dialog";
 import { useQuery } from "@tanstack/react-query";
 import { supabaseClient } from "@/lib/supabase/client";
+import Image from "next/image";
 
 async function getNotes() {
   const {
@@ -42,8 +43,14 @@ export default function Dashboard() {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="h-10 w-10 rounded-md bg-black p-2">
-                <Brain className="h-6 w-6 text-white" />
+              <div className="size-10">
+                <Image
+                  src={"/logo.jpeg"}
+                  alt="Note Keeper Logo"
+                  width={48}
+                  height={48}
+                  className="w-full h-full"
+                />
               </div>
               <span className="text-xl font-bold">Note Keeper</span>
             </div>
