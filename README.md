@@ -20,10 +20,10 @@
 
 ## Tech Stack
 
-* **Frontend:** [Next.js](https://nextjs.org/) (React framework for building performant web applications)
-* **Backend & Database:** [Supabase](https://supabase.com/) (Open-source Firebase alternative for database, authentication, and more)
-* **Vector Database:** [Pinecone](https://www.pinecone.io/) (Scalable vector database for efficient similarity search)
-* **Large Language Model:** [Google Gemini](https://ai.google.dev/) (For powering the AI chatbot and RAG implementation)
+* **Frontend:** [Next.js](https://nextjs.org/)
+* **Backend & Database:** [Supabase](https://supabase.com/)
+* **Vector Database:** [Pinecone](https://www.pinecone.io/)
+* **Large Language Model:** [Google Gemini](https://ai.google.dev/)
 
 ## Getting Started
 
@@ -48,12 +48,17 @@ To run Note Keeper locally, follow these steps:
     Create a `.env.local` file in the root directory and add the following environment variables. You will need to obtain these credentials from the respective services:
 
     ```env
-    NEXT_PUBLIC_SUPABASE_URL=YOUR_SUPABASE_URL
-    NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
-    PINECONE_API_KEY=YOUR_PINECONE_API_KEY
-    PINECONE_ENVIRONMENT=YOUR_PINECONE_ENVIRONMENT
-    GEMINI_API_KEY=YOUR_GEMINI_API_KEY
-    # Add any other necessary environment variables
+    NEXT_PUBLIC_SUPABASE_URL = ""
+    NEXT_PUBLIC_SUPABASE_KEY = ""
+    GOOGLE_CLIENT_ID = ""
+    GOOGLE_CLIENT_SECRET=""
+    NEXT_AUTH_SECRET = ""
+    PINECONE_KEY = ""
+    GOOGLE_AI_KEY = ""
+    PINECONE_INDEX = ""
+    CLOUDINARY_API_KEY = ""
+    CLOUDINARY_SECRET = ""
+    NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME = ""
     ```
 
 4.  **Initialize Supabase and Pinecone:**
