@@ -44,12 +44,9 @@ export async function POST(req: NextRequest) {
       (match) => match.score! > 0.4
     );
 
-    console.log(queryResult.matches);
-
     const ctx = aboveThresholdResult.map((match) => {
       return `${match.metadata?.chunk}\n`;
     });
-    console.log(ctx);
 
     const systemPrompt = `
     You are an AI assistant who knows everything about the user's notes and ongoing chat history.
@@ -68,7 +65,7 @@ export async function POST(req: NextRequest) {
     
     **Formatting Instructions:**
     
-    * Use Markdown for formatting: headers, bold text, and lists as needed.
+    * Use Markdown for formatting: headers, bold text, links and lists as needed.
     * Format lists cleanly using bullet points.
     * Avoid awkward line breaks, extra commas, or symbols from the context.
     * Keep a natural, respectful, and conversational tone.
