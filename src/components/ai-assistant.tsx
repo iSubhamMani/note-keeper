@@ -47,7 +47,6 @@ export default function AiAssistant() {
   };
 
   useEffect(() => {
-    console.log("Messages changed");
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
