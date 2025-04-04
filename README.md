@@ -31,7 +31,7 @@ To run Note Keeper locally, follow these steps:
 
 1.  **Clone the repository:**
     ```bash
-    git clone <YOUR_REPOSITORY_URL>
+    git clone https://github.com/iSubhamMani/note-keeper.git
     cd note-keeper
     ```
 
