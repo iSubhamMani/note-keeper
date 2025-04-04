@@ -8,20 +8,21 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
 import { Button } from "./ui/button";
 import { LoaderCircle, Plus } from "lucide-react";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import MDEditor from "@uiw/react-md-editor";
 
 const CreateNoteDialog = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newNote, setNewNote] = useState({ title: "", description: "" });
   const [savingNote, setSavingNote] = useState(false);
   const qc = useQueryClient();
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const createNote = async () => {
     if (!newNote.title.trim() || !newNote.description.trim()) {
@@ -49,6 +50,48 @@ const CreateNoteDialog = () => {
     }
   };
 
+  const handleImageUpload = async (fd: FormData) => {
+    try {
+      setUploadingImage(true);
+      const res = await axios.post("/api/media/upload", fd);
+
+      if (res.data.url) {
+        const url = res.data.url;
+        setNewNote((prev) => ({
+          ...prev,
+          description: prev.description + `\n\n![image](${url})`,
+        }));
+
+        toast("Image uploaded successfully", {
+          position: "bottom-center",
+          style: {
+            backgroundColor: "#2D7DFD",
+            color: "#fff",
+            fontWeight: "bold",
+          },
+          duration: 3000,
+        });
+      }
+    } catch (error) {
+      toast(
+        error instanceof AxiosError
+          ? error.response?.data.message
+          : "Error uploading image",
+        {
+          position: "bottom-center",
+          style: {
+            background: "red",
+            color: "white",
+            fontWeight: "bold",
+          },
+          duration: 3000,
+        }
+      );
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
   return (
     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
       <DialogTrigger asChild>
@@ -57,16 +100,19 @@ const CreateNoteDialog = () => {
           Create Note
         </Button>
       </DialogTrigger>
-      <DialogContent className="border-4 border-black rounded-xl shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-0">
-        <DialogHeader className="bg-black text-white p-4 rounded-t-lg">
+      <DialogContent
+        className="border-2 border-black sm:max-w-xl md:max-w-3xl p-0"
+        style={{ boxShadow: "8px 8px 0 0 #000" }}
+      >
+        <DialogHeader className="bg-white text-black p-4 md:px-6 rounded-t-lg">
           <DialogTitle className="text-xl font-bold">
             Create New Note
           </DialogTitle>
         </DialogHeader>
-        <div className="p-6">
+        <div className="px-2 sm:px-4 md:px-6 pb-4">
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="title" className="font-bold">
+              <Label htmlFor="title" className="font-bold pl-2">
                 Title
               </Label>
               <Input
@@ -80,19 +126,54 @@ const CreateNoteDialog = () => {
                 }
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="description" className="font-bold">
-                Description
-              </Label>
-              <Textarea
-                id="description"
-                placeholder="Enter note description"
-                className="min-h-[120px] max-h-[260px] overflow-y-auto border-2 border-black rounded-lg"
-                value={newNote.description}
-                onChange={(e) =>
-                  setNewNote({ ...newNote, description: e.target.value })
-                }
-              />
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <Label htmlFor="description" className="pl-2 font-bold">
+                  Description
+                </Label>
+                <Label
+                  htmlFor="imageUpload"
+                  className="px-2 py-1.5 text-xs sm:text-sm rounded-lg cursor-pointer max-w-[200px] border-2 border-blue-500 text-black bg-white hover:bg-gray-100 font-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                >
+                  {uploadingImage ? (
+                    <div className="flex items-center gap-2">
+                      <LoaderCircle className="animate-spin size-5" />
+                      <span>Uploading...</span>
+                    </div>
+                  ) : (
+                    "Upload Image"
+                  )}
+                </Label>
+                <Input
+                  onChange={(e) => {
+                    const fd = new FormData();
+                    if (e.target.files) {
+                      fd.append("imgFile", e.target.files[0]);
+                      handleImageUpload(fd);
+                    }
+                    e.target.files = null;
+                  }}
+                  id="imageUpload"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                />
+              </div>
+              <div className="container">
+                <MDEditor
+                  id="description"
+                  className="min-h-[120px] max-h-[360px] overflow-y-auto"
+                  value={newNote.description}
+                  onChange={(e) =>
+                    setNewNote({ ...newNote, description: e || "" })
+                  }
+                  height={400}
+                  preview="edit"
+                  textareaProps={{
+                    placeholder: "Enter note description",
+                  }}
+                />
+              </div>
             </div>
             <Button
               disabled={savingNote}
