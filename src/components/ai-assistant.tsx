@@ -51,6 +51,12 @@ export default function AiAssistant() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  useEffect(() => {
+    if (isOpen) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [isOpen]);
+
   return (
     <>
       {/* Floating button */}
@@ -113,7 +119,7 @@ export default function AiAssistant() {
                         message.role === "user"
                           ? "bg-black text-white rounded-tr-none"
                           : "bg-blue-100 border-2 border-blue-300 rounded-tl-none"
-                      }`}
+                      } break-words`}
                       ref={bottomRef}
                     >
                       {message.role === "model" ? (
